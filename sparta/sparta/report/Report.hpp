@@ -1,7 +1,7 @@
 // <Report> -*- C++ -*-
 
 /*!
- * \file Report.h
+ * \file Report.hpp
  * \brief Part of the metrics and statistics system.
  * Contains a Report class which refers to a number of StatisticInstance
  * instances of other Reports to present a set of associated simuation metrics
@@ -857,7 +857,7 @@ namespace sparta
             uint32_t num_removed = 0;
             for(auto itr = subreps_.begin(); itr != subreps_.end();){
                 if(itr->getName() == name){
-                    subreps_.erase(itr);
+                    itr = subreps_.erase(itr);
                     ++num_removed;
                 }else{
                     ++itr;
