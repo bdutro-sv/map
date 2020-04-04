@@ -649,9 +649,11 @@ public:
         const size_type          subset_offset;
 
         /*!
-         * \brief Initial value of this register
+         * \brief Initial value of this register; if nullptr, then
+         * sparta::ArchData::DEFAULT_INITIAL_FILL is used
          */
-        const unsigned char*     initial_value;
+        typedef unsigned char * InitValueT;
+        const InitValueT        initial_value;
 
         /*!
          * \brief Register hint flags. The flags are not part of sparta but
@@ -786,14 +788,24 @@ public:
     /*!
      * \brief Reset this register to its default value
      * \note Uses poke internally so no notifications are posted
+     * \note Attempts to use Definition::initial_value; if nullptr,
+     *       uses ArchData::DEFAULT_INITIAL_FILL
      */
-    void reset(bool unmasked=true) {
+    void reset(bool unmasked=true)
+    {
+        Definition::InitValueT reset_value = def_->initial_value;
+        if(def_->initial_value == nullptr) {
+            reset_value =
+                (const Definition::InitValueT)alloca(def_->bytes);
+            ::memset(reset_value, ArchData::DEFAULT_INITIAL_FILL, def_->bytes);
+        }
+
         // Poke the whole value, one-byte at a time
-        for(size_type i=0; i<def_->bytes; i++){
+        for(size_type i = 0; i < def_->bytes; i++){
             if(unmasked){
-                pokeUnmasked(def_->initial_value[i], i);
+                pokeUnmasked(reset_value[i], i);
             }else{
-                poke(def_->initial_value[i], i);
+                poke(reset_value[i], i);
             }
         }
     }

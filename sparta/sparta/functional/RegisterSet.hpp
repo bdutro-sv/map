@@ -481,17 +481,17 @@ public:
                 const RegisterBase::Definition *defs,
                 const RegisterProxyBase::Definition *proxy_defs,
                 CurrentBankFunction cbfxn,
-                RegisterTypeTag<RegisterT> tag)
-    : TreeNode("regs",
-               TreeNode::GROUP_NAME_BUILTIN,
-               TreeNode::GROUP_IDX_NONE,
-               "Register set")
-    , adata_(this,
-             ARCH_DATA_LINE_SIZE,
-             ArchData::DEFAULT_INITIAL_FILL,
-             ArchData::DEFAULT_INITIAL_FILL_SIZE,
-             false) // Cannot delete lines
-    , cur_bank_fxn_(cbfxn)
+                RegisterTypeTag<RegisterT> tag) :
+        TreeNode("regs",
+                 TreeNode::GROUP_NAME_BUILTIN,
+                 TreeNode::GROUP_IDX_NONE,
+                 "Register set"),
+        adata_(this,
+               ARCH_DATA_LINE_SIZE,
+               ArchData::DEFAULT_INITIAL_FILL,
+               ArchData::DEFAULT_INITIAL_FILL_SIZE,
+               false), // Cannot delete lines
+        cur_bank_fxn_(cbfxn)
     {
         (void)tag;
 
@@ -531,8 +531,8 @@ public:
     template <typename RegisterT>
     RegisterSet(TreeNode *parent,
                 const RegisterBase::Definition *defs,
-                RegisterTypeTag<RegisterT> tag)
-    : RegisterSet(parent, defs, nullptr, nullptr, tag)
+                RegisterTypeTag<RegisterT> tag) :
+        RegisterSet(parent, defs, nullptr, nullptr, tag)
     {
         // Handled in delegated consturctor
     }

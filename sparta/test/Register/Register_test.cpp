@@ -46,9 +46,9 @@ Register::Definition reg_defs[] = {
                                                                                                                  { "field3", "this is field 3. It is 3 bits and overlaps field1 and field2", 1, 3 } },
                                                                                                                          {Register::BANK_IDX_DEFAULT},
                                                                                                                                   reg1_aliases,       Register::INVALID_ID, 0, nullptr, 0, 0 },
-    { 1,  "medium",   2,                        "B", 0,                        "register that is 8 bytes",  8,  {},      {6},     nullptr,            Register::INVALID_ID, 0, (const uint8_t*) MEDIUM_DEFAULT, 0, 0 },
-    { 101,"medium2",  2,                        "B", 0,                        "register that is 8 bytes",  8,  {},      {5},     nullptr,            Register::INVALID_ID, 0, (const uint8_t*) MEDIUM_DEFAULT, 0, 0 },
-    { 102,"medium3",  2,                        "B", 0,                        "register that is 8 bytes",  8,  {},      {4},     nullptr,            Register::INVALID_ID, 0, (const uint8_t*) MEDIUM_DEFAULT, 0, 0 },
+    { 1,  "medium",   2,                        "B", 0,                        "register that is 8 bytes",  8,  {},      {6},     nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) MEDIUM_DEFAULT, 0, 0 },
+    { 101,"medium2",  2,                        "B", 0,                        "register that is 8 bytes",  8,  {},      {5},     nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) MEDIUM_DEFAULT, 0, 0 },
+    { 102,"medium3",  2,                        "B", 0,                        "register that is 8 bytes",  8,  {},      {4},     nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) MEDIUM_DEFAULT, 0, 0 },
     { 2,  "large",    2,                        "B", 1,                        "register that is 16 bytes", 16, { { "b15_00",   "A", 0,   15  },
                                                                                                                   { "b31_16",   "B", 16,  31  },
                                                                                                                   { "b47_32",   "C", 32,  47  },
@@ -78,12 +78,12 @@ Register::Definition reg_defs[] = {
     // Test write-mask
     { 11, "wm_01",    Register::GROUP_NUM_NONE, "",  Register::GROUP_IDX_NONE, "partially masked",          4,  { {"b03_00",  "A", 0,  3,   true },
                                                                                                                   {"b09_05",  "B", 5,  9,   true },
-                                                                                                                  {"b15_12",  "C", 12, 15,  false} },  {},      nullptr,            Register::INVALID_ID, 0, (const uint8_t*) ALTERNATING_DEFAULT, 0, 0 },
-    { 12, "wm_02",    Register::GROUP_NUM_NONE, "",  Register::GROUP_IDX_NONE, "fully unwritable",          8,  { {"b63_00",  "A", 0,  63,  true } },  {},      nullptr,            Register::INVALID_ID, 0, (const uint8_t*) ALTERNATING_DEFAULT, 0, 0 },
+                                                                                                                  {"b15_12",  "C", 12, 15,  false} },  {},      nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) ALTERNATING_DEFAULT, 0, 0 },
+    { 12, "wm_02",    Register::GROUP_NUM_NONE, "",  Register::GROUP_IDX_NONE, "fully unwritable",          8,  { {"b63_00",  "A", 0,  63,  true } },  {},      nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) ALTERNATING_DEFAULT, 0, 0 },
     { 13, "wm_03",    Register::GROUP_NUM_NONE, "",  Register::GROUP_IDX_NONE, "fully writable",            16, { {"b127_64", "A", 64, 127, false},
-                                                                                                                  {"b63_00",  "B", 0,  63,  false} },  {},      nullptr,            Register::INVALID_ID, 0, (const uint8_t*) ALTERNATING_DEFAULT, 0, 0 },
+                                                                                                                  {"b63_00",  "B", 0,  63,  false} },  {},      nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) ALTERNATING_DEFAULT, 0, 0 },
     { 14, "wm_04",    Register::GROUP_NUM_NONE, "",  Register::GROUP_IDX_NONE, "mask spans u64s",           16, { {"b65_13",  "A", 13, 65,  true },
-                                                                                                                  {"b67_64",  "B", 64, 67,  false} },  {},      nullptr,            Register::INVALID_ID, 0, (const uint8_t*) ALTERNATING_DEFAULT, 0, 0 },
+                                                                                                                  {"b67_64",  "B", 64, 67,  false} },  {},      nullptr,            Register::INVALID_ID, 0, (Register::Definition::InitValueT) ALTERNATING_DEFAULT, 0, 0 },
     Register::DEFINITION_END
 };
 
@@ -431,6 +431,37 @@ void timeWrites(sparta::RegisterBase *r64)
     std::cout << std::endl;
 }
 
+// This will test register initization/reset (issue #88)
+void testInitialization()
+{
+    const uint32_t y_value[1] = {0xfeedbeef};
+
+    Register::Definition init_regs[] = {
+        {0, "x", 1, "group_name", 0, "description", 4, {}, {}, 0, Register::INVALID_ID, 0, nullptr, 0, 0},
+        {1, "y", 2, "group_name", 0, "description", 4, {}, {}, 0, Register::INVALID_ID, 0, (Register::Definition::InitValueT)y_value, 0, 0},
+        Register::DEFINITION_END
+    };
+    RootTreeNode root;
+    DummyDevice dummy(&root);
+    std::unique_ptr<RegisterSet> regs(RegisterSet::create(&dummy, init_regs));
+
+    EXPECT_EQUAL(regs->getRegister("x")->read<uint32_t>(), 0xCCCCCCCC);
+    regs->getRegister("x")->write(0xDEADBEEF);
+    EXPECT_EQUAL(regs->getRegister("x")->read<uint32_t>(), 0xDEADBEEF);
+
+    EXPECT_EQUAL(regs->getRegister("y")->read<uint32_t>(), 0xfeedbeef);
+    regs->getRegister("y")->write(0);
+    EXPECT_EQUAL(regs->getRegister("y")->read<uint32_t>(), 0);
+
+    // Issue #88, this caused a seg fault
+    regs->reset();
+
+    EXPECT_EQUAL(regs->getRegister("x")->read<uint32_t>(), 0xCCCCCCCC);
+    EXPECT_EQUAL(regs->getRegister("y")->read<uint32_t>(), 0xfeedbeef);
+
+    root.enterTeardown();
+}
+
 class BankGetter {
 public:
 
@@ -750,7 +781,7 @@ int main()
     testFieldRegisterWrite();
     testGoodRegs();
     testBadRegs();
-
+    testInitialization();
 
     // Register I/O
 
